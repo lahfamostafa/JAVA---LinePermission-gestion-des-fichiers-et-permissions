@@ -1,8 +1,8 @@
 package ma.youcode.lineperm.model;
 
 public class User {
-    public String user;
-    public String password;
+    private  String user;
+    private String password;
 
     public User(String user , String password){
         this.user = user;
