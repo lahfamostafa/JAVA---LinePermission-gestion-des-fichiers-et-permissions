@@ -5,79 +5,52 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
-// import ma.youcode.lineperm.ui.ConsoleApp;
+import org.mindrot.jbcrypt.BCrypt;
+import ma.youcode.lineperm.model.User;
 
 public class UserService {
 
-    public boolean actif = true;
+    Map <String,User> userMap = new HashMap<>();
+
     Scanner scanner = new Scanner(System.in);
 
-    public String utilisateurConnecte = null;
-
-    public String lireLigne(){
-        if(utilisateurConnecte == null){
-            System.out.print("lineperm> ");
-        }else System.out.print(utilisateurConnecte + "@ligneperm> ");
-        return scanner.nextLine();
+    public UserService(){
+        loadFile();
     }
 
-    public void login(){
-        if(utilisateurConnecte != null){
-            System.out.println("Vous aves deja connecte !");
-            return ;
+    public boolean login(String user, String password){
+        if(userMap.containsKey(user)){
+            User userP = userMap.get(user);
+            if(BCrypt.checkpw(password,userP.getPassword())){
+                System.out.println("Vous ete conncte ");
+                return true;
+            }
         }
-        
-        System.out.print("Login : ");
-        String user = scanner.nextLine();
-        System.out.print("password : ");
-        String password = scanner.nextLine();
-        
-        if(verifierAuthentification(user,password)){
-            System.out.println("Vous ete conncte ");
-            utilisateurConnecte = user;
-        }
-        else
-            System.out.println("Mot de pass ou user incorect !");
-    }
-
-    public void logout(){
-        System.out.println("Vous ete deconnecte.");
-        utilisateurConnecte = null;
+        System.out.println("Mot de pass ou user incorect !");
+        return false;
     }
     
-    public void signup(){
-        if(utilisateurConnecte != null){
-            System.out.println("Vous aves deja connecte !");
-            return ;
-        }
-
-        System.out.print("Login : ");
-        String user = scanner.nextLine();
-        System.out.print("password : ");
-        String password = scanner.nextLine();
-
-        if(verifierAuthentification(user,password)){
-            System.out.println("user ou mot de passe deja exist");
-            return;
+    
+    public boolean signup(String user , String password){
+        if(userMap.containsKey(user)){
+            System.out.println("Ce nom d'utilisateur est deja pris !");
+            return false;
         }
 
         if(ajouterText(user,password)){
-            if(verifierAuthentification(user,password)){
-                System.out.println("inscription avec succes");
-                utilisateurConnecte = user;
-            }
+            System.out.println("inscription avec succes");
+            loadFile();
+            return true;
         }
+        return false;
     }
 
-    public void exit(){
-        System.out.println("Au revoir.");
-        utilisateurConnecte = null;
-        actif = false ;
-    }
-
-    public static boolean verifierAuthentification(String loginSaisi, String mdpSaisi){
+    public void loadFile(){
+        userMap.clear();
         try(BufferedReader br = new BufferedReader(new FileReader("src/main/java/ma/youcode/lineperm/Users.txt"))){
             String line;
             while((line = br.readLine()) != null){
@@ -85,21 +58,22 @@ public class UserService {
                 if(identifiants.length == 2){
                     String loginFichier = identifiants[0].trim();
                     String mdpFichier = identifiants[1].trim();
-                    if(loginFichier.equals(loginSaisi) && mdpFichier.equals(mdpSaisi)){
-                        return true;
-                    }
+                    User user = new User(loginFichier, mdpFichier);
+                    userMap.put(loginFichier, user);
                 }
             }
         }catch(IOException e){
             e.printStackTrace();
         }
-        return false;
     }
-
-    public static boolean ajouterText(String loginSaisi, String mdpSaisi){
+    
+    public boolean ajouterText(String loginSaisi, String mdpSaisi){
+        String passwordhash = BCrypt.hashpw(mdpSaisi, BCrypt.gensalt());
         try(BufferedWriter bw = new BufferedWriter(new FileWriter("src/main/java/ma/youcode/lineperm/Users.txt" , true))){
-            bw.write(loginSaisi + " : " + mdpSaisi);
+            bw.write(loginSaisi + " : " + passwordhash);
             bw.newLine();
+            User newUser =new User(loginSaisi,passwordhash);
+            userMap.put(loginSaisi, newUser);
             return true;
         }catch(IOException e){
             e.printStackTrace();
