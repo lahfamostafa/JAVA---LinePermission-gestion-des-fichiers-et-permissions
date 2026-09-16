@@ -1,8 +1,11 @@
 package ma.youcode.lineperm.service;
 
 import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 // import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Scanner;
@@ -34,15 +37,17 @@ public class FileService {
                 System.out.println("Le fichier " + FileName + " existe deja !");
                 return;
             }
-            FileWriter fw = new FileWriter(dataFile.toFile(),true);
+
+            // FileWriter fw = new FileWriter(dataFile.toFile(),true);
             Fichier fichier = new Fichier(propr, FileName);
-            fw.write(fichier.getName()+","+fichier.getProprietaire()+","
-                    +fichier.isOwnerRead()+","+fichier.isOwnerWrite()+","+fichier.isOwnerDelete()+","
-                    +fichier.isAutherRead()+","+fichier.isAutherWrite()+","+fichier.isAutherDelete()
-                +"\n");
-            fw.close();
-            loadFile();
-            Files.createDirectories(saveFoder);
+            String csvLine = String.join(",",
+                fichier.getName(), fichier.getProprietaire(),
+                String.valueOf(fichier.isOwnerWrite()), String.valueOf(fichier.isOwnerRead()), String.valueOf(fichier.isOwnerDelete()),
+                String.valueOf(fichier.isAutherRead()), String.valueOf(fichier.isAutherWrite()), String.valueOf(fichier.isAutherDelete())
+            ) + System.lineSeparator();
+
+            Files.writeString(dataFile, csvLine, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            fileMap.put(FileName, fichier);
             Files.createFile(filePath);
             System.out.println("Fichier " + FileName + " cree avec succes.");
         } catch (Exception e) {
@@ -51,9 +56,12 @@ public class FileService {
     }
 
     public void loadFile(){
+        fileMap.clear();
+        if (!Files.exists(dataFile)) return;
         try {
             List<String> lignes = Files.readAllLines(dataFile);
             for(String ligne :lignes){
+                if (ligne.isBlank()) continue;
                 String[] line = ligne.split(",");
                 String FileName = line[0];
                 String Owner = line[1];
@@ -63,6 +71,7 @@ public class FileService {
                 boolean AW = Boolean.parseBoolean(line[5]);
                 boolean AR = Boolean.parseBoolean(line[6]);
                 boolean AD = Boolean.parseBoolean(line[7]);
+
                 Fichier fichier =new Fichier(Owner, FileName, OW, OR, OD, AW, AR, AD);
                 fileMap.put(FileName, fichier);
             }
@@ -72,38 +81,42 @@ public class FileService {
     }
 
     public boolean hasAcces(String file, String perm ,String user){
-        for(Fichier f:fileMap.values()){
-            if(f.getName().equals(file)){
-                if(perm.equals("w")){
-                    if (f.isAutherWrite() || (user.equals(f.getProprietaire()))) {
-                        nanoCommande(file);
-                        return true;
-                    }
-                    System.out.println("vous n'avez pas la permission d'ecrire dans : "+file);
-                }else if(perm.equals("r")){
-                    if (f.isAutherRead() || (user.equals(f.getProprietaire()))) {
-                        catCommande(file);
-                        return true;
-                    }
-                    System.out.println("vous n'avez pas la permission de lire : "+file);
-                }else if(perm.equals("d")){
-                    if (f.isAutherDelete() || (user.equals(f.getProprietaire()))) {
-                        System.out.println("vous avez la permission de supprimer  : "+file);
-                        return true;
-                    }
-                    System.out.println("vous n'avez pas la permission de supprimer : "+file);
-                }return false;
-            }
+        Fichier f = fileMap.get(file);
+        if (f == null) {
+            System.out.println("Le fichier est introuvable");
+            return false;
         }
-        System.out.println("le fichier introuvable");
+        if(perm.equals("w")){
+            if (f.isAutherWrite() || (user.equals(f.getProprietaire()))) {
+                nanoCommande(file);
+                return true;
+            }
+            System.out.println("vous n'avez pas la permission d'ecrire dans : "+file);
+        }else if(perm.equals("r")){
+            if (f.isAutherRead() || (user.equals(f.getProprietaire()))) {
+                catCommande(file);
+                return true;
+            }
+            System.out.println("vous n'avez pas la permission de lire : "+file);
+        }else if(perm.equals("d")){
+            if (f.isAutherDelete() || (user.equals(f.getProprietaire()))) {
+                System.out.println("vous avez la permission de supprimer  : "+file);
+                return true;
+            }
+            System.out.println("vous n'avez pas la permission de supprimer : "+file);
+        }
         return false;
     }
 
     public void catCommande(String file){
-        Path foldesFiles = Path.of("src/main/java/ma/youcode/lineperm/files/"+file);
+        Path foldesFiles = saveFoder.resolve(file);
         try {
+            if (!Files.exists(foldesFiles)) {
+                System.out.println("Fichier inexistant.");
+                return;
+            }
             List<String> lines = Files.readAllLines(foldesFiles);
-            if(lines.size() == 0){
+            if(lines.isEmpty()){
                 System.out.println("(fichier vide)");
                 return ;
             }
@@ -116,17 +129,25 @@ public class FileService {
     }
 
     public void nanoCommande(String file){
-        Path foldesFiles = Path.of("src/main/java/ma/youcode/lineperm/files/"+file);
+        Path foldesFiles = saveFoder.resolve(file);
         System.out.println("=== Contenu actuel de " + file + " ===");
         System.out.println("--- Entrez votre texte (tapez 'EOF' sur une nouvelle ligne pour enregistrer) ---");
         catCommande(file);
+
         Scanner scanner = new Scanner(System.in);
         StringBuilder sb = new StringBuilder();
+
         while (true) {
             String ligne = scanner.nextLine();
             if(ligne.contains("EOF"))break ;
             sb.append(ligne);
             sb.append(System.lineSeparator());
+        }
+        try {
+            Files.writeString(foldesFiles, sb.toString(), StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            System.out.println("Modifications enregistrees dans " + file);
+        } catch (IOException e) {
+            System.err.println("Erreur lors de l'enregistrement dans le fichier : " + e.getMessage());
         }
     }
 }
