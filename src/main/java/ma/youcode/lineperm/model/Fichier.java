@@ -25,10 +25,12 @@ public class Fichier {
         this.autherDelete = autherDelete;
     }
 
+
     public Fichier(String proprietaire, String name) {
         this.proprietaire = proprietaire;
         this.name = name;
     }
+    
 
     public String getProprietaire() {
         return proprietaire;
@@ -94,7 +96,7 @@ public class Fichier {
         this.autherDelete = autherDelete;
     }
 
-    public String getPersmission(){
+    public String Persmission(){
         String ownerPermissions = 
             (ownerRead ? "r" : "-") +
             (ownerWrite ? "w" : "-") +

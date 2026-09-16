@@ -14,7 +14,9 @@ import ma.youcode.lineperm.model.User;
 
 public class UserService {
 
-    private final Map <String,User> userMap = new HashMap<>();
+    Map <String,User> userMap = new HashMap<>();
+
+    Scanner scanner = new Scanner(System.in);
 
     public UserService(){
         loadFile();
@@ -23,22 +25,32 @@ public class UserService {
     public boolean login(String user, String password){
         if(userMap.containsKey(user)){
             User userP = userMap.get(user);
-            return BCrypt.checkpw(password,userP.getPassword());
+            if(BCrypt.checkpw(password,userP.getPassword())){
+                System.out.println("Vous ete conncte ");
+                return true;
+            }
         }
+        System.out.println("Mot de pass ou user incorect !");
         return false;
     }
     
     
     public boolean signup(String user , String password){
         if(userMap.containsKey(user)){
+            System.out.println("Ce nom d'utilisateur est deja pris !");
             return false;
         }
-        return ajouterText(user,password);
+
+        if(ajouterText(user,password)){
+            System.out.println("inscription avec succes");
+            loadFile();
+            return true;
+        }
+        return false;
     }
 
-    private void loadFile(){
+    public void loadFile(){
         userMap.clear();
-        
         try(BufferedReader br = new BufferedReader(new FileReader("src/main/java/ma/youcode/lineperm/Users.txt"))){
             String line;
             while((line = br.readLine()) != null){
