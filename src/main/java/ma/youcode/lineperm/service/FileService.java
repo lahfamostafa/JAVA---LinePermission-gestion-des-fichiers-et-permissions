@@ -1,11 +1,15 @@
 package ma.youcode.lineperm.service;
 
 import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 // import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -23,7 +27,7 @@ public class FileService {
 
     public void lsCommande(){
         for(Fichier f:fileMap.values()){
-            System.out.printf("%-12s %-18s %s%n",f.Persmission(),f.getName(),f.getProprietaire());
+            System.out.printf("%-12s %-18s %s%n",f.getPersmission(),f.getName(),f.getProprietaire());
         }
     }
     
@@ -71,7 +75,10 @@ public class FileService {
         }
     }
 
-    public boolean hasAcces(String file, String perm ,String user){
+    public boolean hasAcces(String file, String perm ,String user, String newPerm){
+        if(user == null){
+            System.out.println("Tu dois se connecter d'abord");return false;
+        }
         for(Fichier f:fileMap.values()){
             if(f.getName().equals(file)){
                 if(perm.equals("w")){
@@ -86,6 +93,12 @@ public class FileService {
                         return true;
                     }
                     System.out.println("vous n'avez pas la permission de lire : "+file);
+                }else if(perm.equals("c")){
+                    if (user.equals(f.getProprietaire())) {
+                        chmodCommande(file,newPerm);
+                        return true;
+                    }
+                    System.out.println("vous n'avez pas la permission de modifier les permssions : "+file);
                 }else if(perm.equals("d")){
                     if (f.isAutherDelete() || (user.equals(f.getProprietaire()))) {
                         System.out.println("vous avez la permission de supprimer  : "+file);
@@ -100,9 +113,9 @@ public class FileService {
     }
 
     public void catCommande(String file){
-        Path foldesFiles = Path.of("src/main/java/ma/youcode/lineperm/files/"+file);
+        Path folderFiles = saveFoder.resolve(file);
         try {
-            List<String> lines = Files.readAllLines(foldesFiles);
+            List<String> lines = Files.readAllLines(folderFiles);
             if(lines.size() == 0){
                 System.out.println("(fichier vide)");
                 return ;
@@ -116,7 +129,7 @@ public class FileService {
     }
 
     public void nanoCommande(String file){
-        Path foldesFiles = Path.of("src/main/java/ma/youcode/lineperm/files/"+file);
+        Path folderFiles = saveFoder.resolve(file);
         System.out.println("=== Contenu actuel de " + file + " ===");
         System.out.println("--- Entrez votre texte (tapez 'EOF' sur une nouvelle ligne pour enregistrer) ---");
         catCommande(file);
@@ -125,8 +138,52 @@ public class FileService {
         while (true) {
             String ligne = scanner.nextLine();
             if(ligne.contains("EOF"))break ;
-            sb.append(ligne);
-            sb.append(System.lineSeparator());
+            sb.append(ligne).append(System.lineSeparator());
+        }
+        try {
+            Files.write(folderFiles, sb.toString().getBytes(StandardCharsets.UTF_8),StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void chmodCommande(String file, String newPerm){
+        Fichier fichier = fileMap.get(file);
+
+        if (fichier == null) {
+            System.out.println("Fichier introuvable : " + file);
+            return;
+        }
+
+        String ancientPerm = fichier.getPersmission();
+
+        if (newPerm.startsWith("-")) {
+            if(newPerm.contains("w")) fichier.setAutherWrite(false);
+            if(newPerm.contains("r")) fichier.setAutherRead(false);
+            if(newPerm.contains("d")) fichier.setAutherDelete(false);
+        }else{
+            if(newPerm.contains("w")) fichier.setAutherWrite(true);
+            if(newPerm.contains("r")) fichier.setAutherRead(true);
+            if(newPerm.contains("d")) fichier.setAutherDelete(true);
+        }
+        
+        System.out.println(file + " : " + ancientPerm + "  ->  " + fichier.getPersmission());
+        try {
+            List<String> lignes = new ArrayList<>();
+            for(Fichier f:fileMap.values()){
+                String ligne = f.getName() + "," +
+                           f.getProprietaire() + "," +
+                           f.isOwnerRead() + "," +
+                           f.isOwnerWrite() + "," +
+                           f.isOwnerDelete() + "," +
+                           f.isAutherRead() + "," +
+                           f.isAutherWrite() + "," +
+                           f.isAutherDelete();
+                lignes.add(ligne);
+            }
+            Files.write(dataFile, lignes);
+        } catch (Exception e) {
+            System.out.println("Erreur lors de la mise a jour de Files.txt : " +e.getStackTrace());
         }
     }
 }

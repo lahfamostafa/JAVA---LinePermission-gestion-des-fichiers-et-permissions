@@ -1,5 +1,5 @@
 **/target/
-src/main/java/ma/youcode/lineperm/files/
+**/files/
 lib/
-src/main/java/ma/youcode/lineperm/Files.txt
-src/main/java/ma/youcode/lineperm/Users.txt
+**/Files.txt
+**/Users.txt

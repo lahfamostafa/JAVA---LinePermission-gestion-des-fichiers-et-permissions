@@ -54,16 +54,16 @@ public class ConsoleApp{
                 fs.lsCommande();
                 break;
             case "chmod":
-                System.out.println("chmoud");
+                fs.hasAcces(commandes[2].trim(),"c",utilisateurConnecte,commandes[1].trim());
                 break;
             case "cat":
-                fs.hasAcces(commandes[1].trim(),"r",utilisateurConnecte);
+                fs.hasAcces(commandes[1].trim(),"r",utilisateurConnecte,"");
                 break;
             case "nano":
-                fs.hasAcces(commandes[1].trim(),"w",utilisateurConnecte);
+                fs.hasAcces(commandes[1].trim(),"w",utilisateurConnecte,"");
                 break;
             case "rm":
-                fs.hasAcces(commandes[1].trim(),"d",utilisateurConnecte);
+                fs.hasAcces(commandes[1].trim(),"d",utilisateurConnecte,"");
                 break;
             case "touch":
                 if(utilisateurConnecte == null){
