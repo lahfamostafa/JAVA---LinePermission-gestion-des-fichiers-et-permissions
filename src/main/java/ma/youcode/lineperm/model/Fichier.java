@@ -96,7 +96,7 @@ public class Fichier {
         this.autherDelete = autherDelete;
     }
 
-    public String Persmission(){
+    public String getPersmission(){
         String ownerPermissions = 
             (ownerRead ? "r" : "-") +
             (ownerWrite ? "w" : "-") +
